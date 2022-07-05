@@ -1,5 +1,5 @@
 import statistics
-import shap
+
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -34,6 +34,7 @@ d = d[allfeats].dropna()  # extract the most important features identified for t
 
 featureimpPath = "D:\\Etienne\\summer2022_CRMS\\everythingCRMS2\\experimentManyDatasets\\FeatureImportancePlots\\"
 MLRtesttrainPath = "D:\\Etienne\\summer2022_CRMS\\everythingCRMS2\\experimentManyDatasets\\MLRtest_trainPlots\\"
+MLR2DtesttrainPath = "D:\\Etienne\\summer2022_CRMS\\everythingCRMS2\\experimentManyDatasets\\MLR2Dtest_trainPlots\\"
 RFtesttrainPlot = "D:\\Etienne\\summer2022_CRMS\\everythingCRMS2\\experimentManyDatasets\\RFtest_trainPlots\\"
 RF2DtesttrainPlot = "D:\\Etienne\\summer2022_CRMS\\everythingCRMS2\\experimentManyDatasets\\RF2Dtest_trainPlots\\"
 
@@ -67,11 +68,9 @@ def get_hyperRF(folds):
                               scoring=howtoscore)
     return gridsearch
 
-
 def get_rf():
     model = RandomForestRegressor(n_estimators=400, max_depth=90, random_state=0)
     return model
-
 
 def evaluate_modelrf(data, target, folds=10, repeats=100):
     # prepare the cross-validation procedure
@@ -84,7 +83,6 @@ def evaluate_modelrf(data, target, folds=10, repeats=100):
 
     return scores
 
-
 def evaluate_modelhRF(data, target, folds=10, repeats=100):
     # prepare the cross-validation procedure
     cv = RepeatedKFold(n_splits=folds, n_repeats=repeats, random_state=1)
@@ -95,6 +93,13 @@ def evaluate_modelhRF(data, target, folds=10, repeats=100):
     # evaluate model
     scores = cross_val_score(model, data, target, scoring=howtoscore, cv=cv, n_jobs=-1)
 
+    return scores
+
+def evaluate_modelMLR(data, target, folds=10, repeats=100):
+    # prepare the cross-validation procedure
+    cv = RepeatedKFold(n_splits=folds, n_repeats=repeats, random_state=1)
+    model = linear_model.LinearRegression()
+    scores = cross_val_score(model, data, target, scoring=howtoscore, cv=cv, n_jobs=-1)
     return scores
 
 
@@ -117,7 +122,7 @@ X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns.values)
 
 results = list()
 # evaluate using a given number of repeats
-scores = evaluate_modelrf(X, y, 5, 100)
+scores = evaluate_modelMLR(X, y, 5, 100)
 # summarize
 print('>%d avg_score=%.4f se=%.3f' % (100, averagingfunc(scores), sem(scores)))
 scoresdict = scores
@@ -132,11 +137,10 @@ results.append(scores)
 predictedcvRepeat = []
 holdtrue = []
 holdmodels = []
-for r in range(1, 251):
+for r in range(1, 1001):
     splits = KFold(n_splits=5, shuffle=True).split(X, y)
-    model = get_rf().fit(X, y)
-    predicted = cross_val_predict(model, X, y,
-                                  cv=splits)  # RepeatedKFold(n_splits=5, n_repeats=100, random_state=1)
+    model = linear_model.LinearRegression()
+    predicted = cross_val_predict(model, X, y, cv=splits)  # RepeatedKFold(n_splits=5, n_repeats=100, random_state=1)
     predictedcvRepeat.append(predicted)
     holdtrue.append(y)
     holdmodels.append(model)
@@ -145,7 +149,6 @@ predictedcvRepeat = [x for xs in predictedcvRepeat for x in xs]
 holdtrue = [x for xs in holdtrue for x in xs]
 
 r2cv = metrics.r2_score(holdtrue, predictedcvRepeat)
-print(r2cv)
 figf, axf = plt.subplots()
 lims = [
     np.min([holdtrue, predictedcvRepeat]),  # min of both axes
@@ -158,10 +161,11 @@ axf.set_aspect('equal')  # can also be equal
 axf.set_xlabel('Predicted Accretion Rate (mm/yr)')
 axf.set_ylabel('Observed Accretion Rate (mm/yr)')
 axf.set_title('Heatmap 100x Repeated 5-Fold CV for Whole Dataset')
+
 axf.text(0.05, 0.95, str('R2: ' + str(round(r2cv, 4))), transform=axf.transAxes, fontsize=14,
          verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-figf.show()
-figf.savefig(RF2DtesttrainPlot + "wholeDataset.png")
+# figf.show()
+figf.savefig(MLR2DtesttrainPath + "wholeDataset.png")
 
 
 def dataPredictRF(X_train, y_train, X_test, y_test, folds):
@@ -174,7 +178,7 @@ def dataPredictRF(X_train, y_train, X_test, y_test, folds):
     return ypred, bestMod, bestscore  # there is no best score becuase there is no grid search
 
 
-def dataPredictMLR(X_train, y_train, X_test, y_test):
+def dataPredictMLR(X_train, y_train, X_test, y_test, folds):
     model = linear_model.LinearRegression()
     model.fit(X_train, y_train)
     ypred = model.predict(X_test)
@@ -199,39 +203,42 @@ def regression_results(y_true2, y_pred2):
     print('R2: ', round(r2, 4))
 
 
-# For random forest
+# For MLR
 bestscoresls = []
 bestmodelsls = []
 bestpredictedvalues = []
 besttestvalues = []
-besttrainvalues = []
-besttestfortrain = []
-for i in range(1, 251):
+for i in range(1, 1001):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
-    ypred, bestmodel, bestscore = dataPredictRF(X_train, y_train, X_test, y_test)
+    ypred, bestmodel, bestscore = dataPredictMLR(X_train, y_train, X_test, y_test, 5)
     # Below for 2D
 
     bestscoresls.append(bestscore)
     bestmodelsls.append(bestmodel)
     bestpredictedvalues.append(ypred)
     besttestvalues.append(y_test)
-    besttrainvalues.append(X_train)
-    besttestfortrain.append(X_test)
-    # if i == 1:
-    #     y_obs = y_test
-    #     y_predicted = ypred
-    # else:
-    #     y_obs = np.hstack((y_obs, y_test))
-    #     y_predicted = np.hstack((y_predicted, ypred))
-
+    if i == 1:
+        y_obs = y_test
+        y_predicted = ypred
+    else:
+        y_obs = np.hstack((y_obs, y_test))
+        y_predicted = np.hstack((y_predicted, ypred))
+# bestmodeldict[key] = bestmodelsls
+# bestscoredict[key] = bestscoresls
+# bestpredictedDict[key] = bestpredictedvalues
+# besttestDict[key] = besttestvalues
+print(np.max(bestscoresls))  # print the highest score
 getidx = bestscoresls.index(np.max(bestscoresls))
-print(bestscoresls[getidx])
-# regression_results(y_predicted, y_obs)
+middleval = round(len(bestscoresls) / 2)
+bestscoresls.sort(key=float)
+print("Best R2 score of middle value", bestscoresls[middleval])
+# print(bestmodelsls[getidx].coef_)  # Print the coeficients of the best model
+# Print the regression results
+regression_results(y_predicted, y_obs)
 
 # Plot best model results #
-pred_acc = bestmodelsls[getidx].predict(besttestfortrain[getidx])
+pred_acc = bestmodelsls[getidx].predict(X_test)
 r2best = metrics.r2_score(bestpredictedvalues[getidx], besttestvalues[getidx])
-print("R2 Best is ", r2best)
 fig, ax = plt.subplots()
 ax.scatter(bestpredictedvalues[getidx], besttestvalues[getidx])
 
@@ -244,65 +251,23 @@ plt.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
 ax.set_aspect('equal')  # can also be equal
 ax.set_xlim(lims)
 ax.set_ylim(lims)
-ax.set_title('Best RF Train-Test Prediction for Accretion for Whole Dataset ')
+ax.set_title('Best MLR Train-Test Prediction for Accretion for Whole Dataset ')
 ax.set_xlabel('Predicted Accretion Rate (mm/yr)')
 ax.set_ylabel('Observed Accretion Rate (mm/yr)')
-ax.text(0.05, 0.95, str('R2: ' + str(round(r2best, 4))), transform=ax.transAxes, fontsize=14,
+textstr = str('R2: ' + str(round(r2best, 4))) + '\n' + str(bestmodelsls[getidx].coef_)
+
+ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=8,
         verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-fig.show()
-fig.savefig(RFtesttrainPlot + "wholeDataset.png")
+# fig.show()
+fig.savefig(MLRtesttrainPath + "wholeDataset.png")
 print('################ BEST SPLIT REGRESSION RESULTS###############')
 regression_results(bestpredictedvalues[getidx], besttestvalues[getidx])
 
-# add SHAPLEY
-bestmodel = bestmodelsls[getidx]
-data = besttrainvalues[getidx]
-
-shap_values = shap.TreeExplainer(bestmodel).shap_values(data)
 
 
-def ABS_SHAP(df_shap, df, key):
-    """
-    from -> https://medium.com/dataman-in-ai/explain-your-model-with-the-shap-values-bc36aac4de3d
-    :param df_shap:
-    :param df:
-    :return:
-    """
-    # import matplotlib as plt
-    # Make a copy of the input data
-    shap_v = pd.DataFrame(df_shap)
-    feature_list = df.columns
-    shap_v.columns = feature_list
-    df_v = df.copy().reset_index().drop('index', axis=1)
-
-    # Determine the correlation in order to plot with different colors
-    corr_list = list()
-    for i in feature_list:
-        b = np.corrcoef(shap_v[i], df_v[i])[1][0]
-        corr_list.append(b)
-    corr_df = pd.concat([pd.Series(feature_list), pd.Series(corr_list)], axis=1).fillna(0)
-    # Make a data frame. Column 1 is the feature, and Column 2 is the correlation coefficient
-    corr_df.columns = ['Variable', 'Corr']
-    corr_df['Sign'] = np.where(corr_df['Corr'] > 0, 'red', 'blue')
-
-    # Plot it
-    shap_abs = np.abs(shap_v)
-    k = pd.DataFrame(shap_abs.mean()).reset_index()
-    k.columns = ['Variable', 'SHAP_abs']
-    k2 = k.merge(corr_df, left_on='Variable', right_on='Variable', how='inner')
-    k2 = k2.sort_values(by='SHAP_abs', ascending=True)
-    colorlist = k2['Sign']
-
-    ax = k2.plot.barh(x='Variable', y='SHAP_abs', color=colorlist, figsize=(5, 6), legend=False)
-    ax.set_xlabel("SHAP Value (Red = Positive Impact)")
-    ax.set_title(str(key))
-    figure = ax.get_figure()
-    return figure
 
 
-figure = ABS_SHAP(shap_values, data, "feat imp on whole dataset")
-figure.show()
-figure.savefig(featureimpPath + "wholeDataset.png")
+
 
 # Make predictions for each of the marsh Class Datasets
 import glob
@@ -368,7 +333,7 @@ for key in cleandfs:
 
     results = list()
     # evaluate using a given number of repeats
-    scores = evaluate_modelrf(X, y, 5, 100)
+    scores = evaluate_modelMLR(X, y, 5, 100)
     # summarize
     print('>%d avg_score=%.4f se=%.3f' % (100, averagingfunc(scores), sem(scores)))
     scoresdict[key] = scores
@@ -382,9 +347,9 @@ for key in cleandfs:
     predictedcvRepeat = []
     holdtrue = []
     holdmodels = []
-    for r in range(1, 251):
+    for r in range(1, 50):
         splits = KFold(n_splits=5, shuffle=True).split(X, y)
-        model = get_rf().fit(X, y)
+        model = linear_model.LinearRegression()
         predicted = cross_val_predict(model, X, y,
                                       cv=splits)  # RepeatedKFold(n_splits=5, n_repeats=100, random_state=1)
         predictedcvRepeat.append(predicted)
@@ -395,7 +360,6 @@ for key in cleandfs:
     holdtrue = [x for xs in holdtrue for x in xs]
 
     r2cv = metrics.r2_score(holdtrue, predictedcvRepeat)
-    print(r2cv)
     figf, axf = plt.subplots()
     lims = [
         np.min([holdtrue, predictedcvRepeat]),  # min of both axes
@@ -407,11 +371,11 @@ for key in cleandfs:
     axf.set_aspect('equal')  # can also be equal
     axf.set_xlabel('Predicted Accretion Rate (mm/yr)')
     axf.set_ylabel('Observed Accretion Rate (mm/yr)')
-    axf.set_title('Heatmap 100x Repeated 5-Fold CV for ' + str(key))
+    axf.set_title('MLR Heatmap 100x Repeated 5-Fold CV for ' + str(key))
     axf.text(0.05, 0.95, str('R2: ' + str(round(r2cv, 4))), transform=axf.transAxes, fontsize=14,
              verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-    figf.show()
-    figf.savefig(RF2DtesttrainPlot + str(key) + ".png")
+    # figf.show()
+    figf.savefig(MLR2DtesttrainPath + str(key) + ".png")
 
 # Manual Runs
 bestmodeldict = {}
@@ -431,17 +395,13 @@ for key in cleandfs:
     bestmodelsls = []
     bestpredictedvalues = []
     besttestvalues = []
-    besttrainvalues = []
-    besttestfortrain = []
-    for i in range(1, 251):
+    for i in range(1, 1001):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
-        ypred, bestmodel, bestscore = dataPredictRF(X_train, y_train, X_test, y_test, 5)
+        ypred, bestmodel, bestscore = dataPredictMLR(X_train, y_train, X_test, y_test, 5)
         bestscoresls.append(bestscore)
         bestmodelsls.append(bestmodel)
         bestpredictedvalues.append(ypred)
         besttestvalues.append(y_test)
-        besttrainvalues.append(X_train)
-        besttestfortrain.append(X_test)
         if i == 1:
             y_obs = y_test
             y_predicted = ypred
@@ -449,11 +409,12 @@ for key in cleandfs:
             y_obs = np.hstack((y_obs, y_test))
             y_predicted = np.hstack((y_predicted, ypred))
 
+
     # Plot best model results #
     getidx = bestscoresls.index(np.max(bestscoresls))
-    pred_acc = bestmodelsls[getidx].predict(besttestfortrain[getidx])
     r2best = metrics.r2_score(bestpredictedvalues[getidx], besttestvalues[getidx])
-    print("R2 Best is ", r2best)
+    pred_acc = bestmodelsls[getidx].predict(X_test)
+
     fig, ax = plt.subplots()
     ax.scatter(bestpredictedvalues[getidx], besttestvalues[getidx])
 
@@ -466,25 +427,17 @@ for key in cleandfs:
     ax.set_aspect('equal')  # can also be equal
     ax.set_xlim(lims)
     ax.set_ylim(lims)
-    ax.set_title('Best Random Train-Test Prediction for Accretion for ' + str(key))
+    ax.set_title('Best MLR Train-Test Prediction for Accretion for ' + str(key))
     ax.set_xlabel('Predicted Accretion Rate (mm/yr)')
     ax.set_ylabel('Observed Accretion Rate (mm/yr)')
-    ax.text(0.05, 0.95, str('R2: ' + str(round(r2best, 4))), transform=axf.transAxes, fontsize=14,
+    textstr = str('R2: ' + str(round(r2best, 4))) + '\n' + str(bestmodelsls[getidx].coef_)
+    ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=8,
             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-
     fig.show()
-    fig.savefig(RFtesttrainPlot + str(key) + ".png")
+    fig.savefig(MLRtesttrainPath + str(key) + ".png")
     print('################ BEST SPLIT REGRESSION RESULTS###############')
     regression_results(bestpredictedvalues[getidx], besttestvalues[getidx])
 
-    # add SHAPLEY for Feature Importance
-    bestmodel = bestmodelsls[getidx]
-    data = besttrainvalues[getidx]
-    shap_values = shap.TreeExplainer(bestmodel).shap_values(data)
-    # plot
-    figure = ABS_SHAP(shap_values, data, str(key))
-    figure.show()
-    figure.savefig(featureimpPath + str(key) + ".png")
 
 # Working on the concatenated datasets
 
@@ -544,7 +497,7 @@ for key in cleandfscontrols:
 
     results = list()
     # evaluate using a given number of repeats
-    scores = evaluate_modelrf(X, y, 5, 100)
+    scores = evaluate_modelMLR(X, y, 5, 100)
     # summarize
     print('>%d avg_score=%.4f se=%.3f' % (100, averagingfunc(scores), sem(scores)))
     scoresdictC[key] = scores
@@ -558,9 +511,9 @@ for key in cleandfscontrols:
     predictedcvRepeat = []
     holdtrue = []
     holdmodels = []
-    for r in range(1, 251):
+    for r in range(1, 1001):
         splits = KFold(n_splits=5, shuffle=True).split(X, y)
-        model = get_rf().fit(X, y)
+        model = linear_model.LinearRegression()
         predicted = cross_val_predict(model, X, y,
                                       cv=splits)  # RepeatedKFold(n_splits=5, n_repeats=100, random_state=1)
         predictedcvRepeat.append(predicted)
@@ -571,7 +524,6 @@ for key in cleandfscontrols:
     holdtrue = [x for xs in holdtrue for x in xs]
 
     r2cv = metrics.r2_score(holdtrue, predictedcvRepeat)
-    print(r2cv)
     figf, axf = plt.subplots()
     lims = [
         np.min([holdtrue, predictedcvRepeat]),  # min of both axes
@@ -583,11 +535,11 @@ for key in cleandfscontrols:
     axf.set_aspect('equal')  # can also be equal
     axf.set_xlabel('Predicted Accretion Rate (mm/yr)')
     axf.set_ylabel('Observed Accretion Rate (mm/yr)')
-    axf.set_title('Heatmap 100x Repeated 5-Fold CV for ' + str(key))
+    axf.set_title('MLR Heatmap 100x Repeated 5-Fold CV for ' + str(key))
     axf.text(0.05, 0.95, str('R2: ' + str(round(r2cv, 4))), transform=axf.transAxes, fontsize=14,
              verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-    figf.show()
-    figf.savefig(RF2DtesttrainPlot + str(key) + ".png")
+    # figf.show()
+    figf.savefig(MLR2DtesttrainPath + str(key) + ".png")
 
 # Manual Runs
 bestmodeldictC = {}
@@ -607,15 +559,13 @@ for key in cleandfscontrols:
     bestmodelsls = []
     bestpredictedvalues = []
     besttestvalues = []
-    besttestfortrain = []
-    for i in range(1, 251):
+    for i in range(1, 1001):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
-        ypred, bestmodel, bestscore = dataPredictRF(X_train, y_train, X_test, y_test, 5)
+        ypred, bestmodel, bestscore = dataPredictMLR(X_train, y_train, X_test, y_test, 5)
         bestscoresls.append(bestscore)
         bestmodelsls.append(bestmodel)
         bestpredictedvalues.append(ypred)
         besttestvalues.append(y_test)
-        besttestfortrain.append(X_test)
         if i == 1:
             y_obs = y_test
             y_predicted = ypred
@@ -625,9 +575,9 @@ for key in cleandfscontrols:
 
     # Plot best model results #
     getidx = bestscoresls.index(np.max(bestscoresls))
-    pred_acc = bestmodelsls[getidx].predict(besttestfortrain[getidx])
     r2best = metrics.r2_score(bestpredictedvalues[getidx], besttestvalues[getidx])
-    print("R2 Best is ", r2best)
+
+    pred_acc = bestmodelsls[getidx].predict(X_test)
     fig, ax = plt.subplots()
     ax.scatter(bestpredictedvalues[getidx], besttestvalues[getidx])
 
@@ -640,23 +590,14 @@ for key in cleandfscontrols:
     ax.set_aspect('equal')  # can also be equal
     ax.set_xlim(lims)
     ax.set_ylim(lims)
-    ax.set_title('Best RF Train-Test Prediction for Accretion for ' + str(key))
+    ax.set_title('Best MLR Train-Test Prediction for Accretion for ' + str(key))
     ax.set_xlabel('Predicted Accretion Rate (mm/yr)')
     ax.set_ylabel('Observed Accretion Rate (mm/yr)')
-    ax.text(0.05, 0.95, str('R2: ' + str(r2best)),
-            transform=ax.transAxes, fontsize=14,
+    textstr = str('R2: ' + str(round(r2best, 4))) + '\n' + str(bestmodelsls[getidx].coef_)
+    ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=8,
             verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-    fig.show()
-    fig.savefig(RFtesttrainPlot + str(key) + ".png")
+    # fig.show()
+    fig.savefig(MLRtesttrainPath + str(key) + ".png")
     print('################ BEST SPLIT REGRESSION RESULTS###############')
     regression_results(bestpredictedvalues[getidx], besttestvalues[getidx])
 
-    # add SHAPLEY
-    bestmodel = bestmodelsls[getidx]
-    data = besttrainvalues[getidx]
-
-    shap_values = shap.TreeExplainer(bestmodel).shap_values(data)
-    # plot
-    figure = ABS_SHAP(shap_values, data, str(key))
-    figure.show()
-    figure.savefig(featureimpPath + str(key) + ".png")
