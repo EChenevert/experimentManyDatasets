@@ -239,38 +239,3 @@ print(bestfeatures)
 
 
 
-
-# X_train = X_train[['NDVI', 'Land_Lost_m2', 'Tide_Amp (ft)', 'Flood Freq (Floods/yr)', 'Distance_to_Fluvial_m_log',
-#                    'Distance_to_Ocean_m_log']]
-# X_test = X_test[['NDVI', 'Land_Lost_m2', 'Tide_Amp (ft)', 'Flood Freq (Floods/yr)', 'Distance_to_Fluvial_m_log',
-#                  'Distance_to_Ocean_m_log']]
-#
-# def dataPredictMLR(X_train, y_train, X_test, y_test):
-#     model = linear_model.LinearRegression()
-#     model.fit(X_train, y_train)
-#     ypred = model.predict(X_test)
-#     bestMod = model
-#     # bestscore = 1
-#     bestscore = metrics.r2_score(ypred, y_test)
-#     return ypred, bestMod, bestscore  # there is no best score becuase there is no grid search
-#
-# model = linear_model.LinearRegression()
-# model.fit(X_train, y_train)
-# ypred = model.predict(X_test)
-#
-# def regression_results(y_true2, y_pred2):
-#     # Regression metrics
-#     mean_absolute_error = metrics.mean_absolute_error(y_true2, y_pred2)
-#     r2 = metrics.r2_score(y_true2, y_pred2)
-#     mse = metrics.mean_squared_error(y_true2, y_pred2)
-#
-#     print('MAE: ', round(mean_absolute_error, 4))
-#     print('MSE: ', round(mse, 4))
-#     print('RMSE: ', round(np.sqrt(mse), 4))
-#     print('R2: ', round(r2, 4))
-#
-# regression_results(y_test, ypred)
-#
-
-
-
