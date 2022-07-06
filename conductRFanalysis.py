@@ -164,7 +164,7 @@ figf.show()
 figf.savefig(RF2DtesttrainPlot + "wholeDataset.png")
 
 
-def dataPredictRF(X_train, y_train, X_test, y_test, folds):
+def dataPredictRF(X_train, y_train, X_test, y_test):
     model = RandomForestRegressor(n_estimators=400, max_depth=90, random_state=0)
     model.fit(X_train, y_train)
     ypred = model.predict(X_test)
@@ -435,7 +435,7 @@ for key in cleandfs:
     besttestfortrain = []
     for i in range(1, 251):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
-        ypred, bestmodel, bestscore = dataPredictRF(X_train, y_train, X_test, y_test, 5)
+        ypred, bestmodel, bestscore = dataPredictRF(X_train, y_train, X_test, y_test)
         bestscoresls.append(bestscore)
         bestmodelsls.append(bestmodel)
         bestpredictedvalues.append(ypred)
@@ -610,7 +610,7 @@ for key in cleandfscontrols:
     besttestfortrain = []
     for i in range(1, 251):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
-        ypred, bestmodel, bestscore = dataPredictRF(X_train, y_train, X_test, y_test, 5)
+        ypred, bestmodel, bestscore = dataPredictRF(X_train, y_train, X_test, y_test)
         bestscoresls.append(bestscore)
         bestmodelsls.append(bestmodel)
         bestpredictedvalues.append(ypred)

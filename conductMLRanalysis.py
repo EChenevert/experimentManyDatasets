@@ -20,11 +20,16 @@ d = pd.read_csv(r"D:\Etienne\summer2022_CRMS\everythingCRMS2\experimentManyDatas
 
 outcome = 'Accretion Rate (mm/yr)'  # Define the target variable
 
+# allfeats = [
+#     'Distance_to_Bays_m', 'Distance_to_Ocean_m', 'Distance_to_Fluvial_m',
+#     'NDVI', 'tss_med', 'windspeed', 'Land_Lost_m2',
+#     'Soil Salinity (ppt)', 'Average Height Herb (cm)',
+#     'avg_percentflooded (%)', 'Tide_Amp (ft)', 'avg_flooding (ft)', 'Flood Freq (Floods/yr)',
+#     outcome
+# ]
+
 allfeats = [
-    'Distance_to_Bays_m', 'Distance_to_Ocean_m', 'Distance_to_Fluvial_m',
-    'NDVI', 'tss_med', 'windspeed', 'Land_Lost_m2',
-    'Soil Salinity (ppt)', 'Average Height Herb (cm)',
-    'avg_percentflooded (%)', 'Tide_Amp (ft)', 'avg_flooding (ft)', 'Flood Freq (Floods/yr)',
+    'Distance_to_Ocean_m', 'Distance_to_Fluvial_m', 'Tide_Amp (ft)', 'avg_flooding (ft)', 'Flood Freq (Floods/yr)',
     outcome
 ]
 
@@ -137,7 +142,7 @@ results.append(scores)
 predictedcvRepeat = []
 holdtrue = []
 holdmodels = []
-for r in range(1, 1001):
+for r in range(1, 101):
     splits = KFold(n_splits=5, shuffle=True).split(X, y)
     model = linear_model.LinearRegression()
     predicted = cross_val_predict(model, X, y, cv=splits)  # RepeatedKFold(n_splits=5, n_repeats=100, random_state=1)
@@ -208,7 +213,7 @@ bestscoresls = []
 bestmodelsls = []
 bestpredictedvalues = []
 besttestvalues = []
-for i in range(1, 1001):
+for i in range(1, 5001):
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33)
     ypred, bestmodel, bestscore = dataPredictMLR(X_train, y_train, X_test, y_test, 5)
     # Below for 2D
@@ -217,25 +222,21 @@ for i in range(1, 1001):
     bestmodelsls.append(bestmodel)
     bestpredictedvalues.append(ypred)
     besttestvalues.append(y_test)
-    if i == 1:
-        y_obs = y_test
-        y_predicted = ypred
-    else:
-        y_obs = np.hstack((y_obs, y_test))
-        y_predicted = np.hstack((y_predicted, ypred))
+    # if i == 1:
+    #     y_obs = y_test
+    #     y_predicted = ypred
+    # else:
+    #     y_obs = np.hstack((y_obs, y_test))
+    #     y_predicted = np.hstack((y_predicted, ypred))
 # bestmodeldict[key] = bestmodelsls
 # bestscoredict[key] = bestscoresls
 # bestpredictedDict[key] = bestpredictedvalues
 # besttestDict[key] = besttestvalues
 print(np.max(bestscoresls))  # print the highest score
 getidx = bestscoresls.index(np.max(bestscoresls))
-middleval = round(len(bestscoresls) / 2)
-bestscoresls.sort(key=float)
-print("Best R2 score of middle value", bestscoresls[middleval])
-# print(bestmodelsls[getidx].coef_)  # Print the coeficients of the best model
-# Print the regression results
-regression_results(y_predicted, y_obs)
-
+plt.figure()
+sns.boxplot(bestscoresls)
+plt.show()
 # Plot best model results #
 pred_acc = bestmodelsls[getidx].predict(X_test)
 r2best = metrics.r2_score(bestpredictedvalues[getidx], besttestvalues[getidx])
@@ -258,7 +259,7 @@ textstr = str('R2: ' + str(round(r2best, 4))) + '\n' + str(bestmodelsls[getidx].
 
 ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=8,
         verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
-# fig.show()
+fig.show()
 fig.savefig(MLRtesttrainPath + "wholeDataset.png")
 print('################ BEST SPLIT REGRESSION RESULTS###############')
 regression_results(bestpredictedvalues[getidx], besttestvalues[getidx])
@@ -347,7 +348,7 @@ for key in cleandfs:
     predictedcvRepeat = []
     holdtrue = []
     holdmodels = []
-    for r in range(1, 50):
+    for r in range(1, 101):
         splits = KFold(n_splits=5, shuffle=True).split(X, y)
         model = linear_model.LinearRegression()
         predicted = cross_val_predict(model, X, y,
@@ -511,7 +512,7 @@ for key in cleandfscontrols:
     predictedcvRepeat = []
     holdtrue = []
     holdmodels = []
-    for r in range(1, 1001):
+    for r in range(1, 101):
         splits = KFold(n_splits=5, shuffle=True).split(X, y)
         model = linear_model.LinearRegression()
         predicted = cross_val_predict(model, X, y,
@@ -600,4 +601,6 @@ for key in cleandfscontrols:
     fig.savefig(MLRtesttrainPath + str(key) + ".png")
     print('################ BEST SPLIT REGRESSION RESULTS###############')
     regression_results(bestpredictedvalues[getidx], besttestvalues[getidx])
+
+
 
