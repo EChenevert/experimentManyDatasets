@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import shap
 from mlxtend.feature_selection import ExhaustiveFeatureSelector
 from numpy import mean
 from scipy import stats
@@ -106,7 +107,7 @@ X_train2, X_val, y_train2, y_val = train_test_split(X_train, y_train, test_size=
 lr = linear_model.LinearRegression()
 feature_selector = ExhaustiveFeatureSelector(lr,
                                              min_features=1,
-                                             max_features=len(allfeats)-1,
+                                             max_features=10,
                                              scoring='r2',
                                              # print_progress=True,
                                              cv=5)  # 5 fold cross-validation
@@ -144,8 +145,9 @@ def regression_results(y_true2, y_pred2):
     print('R2: ', round(r2, 4))
 
 
-def dataPredictMLR(X_train, y_train, X_test, y_test):
-    model = linear_model.LinearRegression()
+def dataPredictRF(X_train, y_train, X_test, y_test):
+    model = RandomForestRegressor(n_estimators=400, max_depth=90, min_samples_split=10, min_samples_leaf=4,
+                                  bootstrap=True, max_features=len(X_train.columns.values)-1)
     model.fit(X_train, y_train)
     ypred = model.predict(X_test)
     bestMod = model
@@ -159,23 +161,24 @@ bestmodelsls = []
 bestpredictedvalues = []
 besttestvalues = []
 bestXvals = []
+bestXtrainvals = []
 for i in range(1, 101):
     X_train, X_test, y_train, y_test = train_test_split(X[bestfeatures], y, test_size=0.2, shuffle=True)
-    ypred, bestmodel, bestscore = dataPredictMLR(X_train, y_train, X_test, y_test)
+    ypred, bestmodel, bestscore = dataPredictRF(X_train, y_train, X_test, y_test)
     bestscoresls.append(bestscore)
     bestmodelsls.append(bestmodel)
     bestpredictedvalues.append(ypred)
     besttestvalues.append(y_test)
     bestXvals.append(X_test)
+    bestXtrainvals.append(X_train)
 
 plt.figure()
 sns.boxplot(x=bestscoresls)
 plt.show()
 
-# Plot best model results: Get the getidx before sorting
+# Grab the index before the sorting of bestscoresls
 getidx = bestscoresls.index(np.max(bestscoresls))  # GIVES THE INDEX OF THE BEST MODEL!!!!
 print(np.max(bestscoresls))  # print the highest score
-print(bestmodelsls[getidx].coef_)  # Print the coeficients of the best model
 
 bestscoresls.sort()
 middlelist = round((len(bestscoresls)-1)/2)
@@ -205,10 +208,14 @@ axf.hist2d(alltestvals, allpredicted, bins=50, cmap='YlGn')
 axf.set_aspect('equal')  # can also be equal
 axf.set_xlabel('Observed Accretion Rate (mm/yr)')
 axf.set_ylabel('Predicted Accretion Rate (mm/yr)')
-axf.set_title('Heatmap 100x Repeated 5-Fold CV for all sites')
+axf.set_title('RF Heatmap 100x Repeated 5-Fold CV for all sites')
 axf.text(0.05, 0.95, str('R2: ' + str(round(r2allcv, 4))), transform=axf.transAxes, fontsize=14,
          verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 figf.show()
+
+# Plot best model results
+
+# print(bestmodelsls[getidx].coef_)  # Print the coeficients of the best model
 
 # pred_acc = bestmodelsls[getidx].predict(bestXvals[getidx])
 r2best = metrics.r2_score(besttestvalues[getidx], bestpredictedvalues[getidx])
@@ -224,53 +231,67 @@ plt.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
 ax.set_aspect('equal')  # can also be equal
 ax.set_xlim(lims)
 ax.set_ylim(lims)
-ax.set_title('Best Train-Test Prediction for Accretion for all sites')
+ax.set_title('Best Train-Test RF Prediction for Accretion for all sites')
 ax.set_xlabel('Observed Accretion Rate (mm/yr)')
 ax.set_ylabel('Predicted Accretion Rate (mm/yr)')
-textstr = str('R2: ' + str(round(r2best, 4))) + '\n' + str(bestmodelsls[getidx].coef_)
-ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=8,
+textstr = str('R2: ' + str(round(r2best, 4)))
+ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=12,
         verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 fig.show()
 
 print('################ BEST SPLIT REGRESSION RESULTS###############')
-regression_results(bestpredictedvalues[getidx], besttestvalues[getidx])
+regression_results(besttestvalues[getidx], bestpredictedvalues[getidx])
 print(bestfeatures)
 
 
+# add SHAPLEY
+bestmodel = bestmodelsls[getidx]
+data = bestXtrainvals[getidx]
+
+shap_values = shap.TreeExplainer(bestmodel).shap_values(data)
 
 
+def ABS_SHAP(df_shap, df):
+    """
+    from -> https://medium.com/dataman-in-ai/explain-your-model-with-the-shap-values-bc36aac4de3d
+    :param df_shap:
+    :param df:
+    :return:
+    """
+    # import matplotlib as plt
+    # Make a copy of the input data
+    shap_v = pd.DataFrame(df_shap)
+    feature_list = df.columns
+    shap_v.columns = feature_list
+    df_v = df.copy().reset_index().drop('index', axis=1)
 
-# X_train = X_train[['NDVI', 'Land_Lost_m2', 'Tide_Amp (ft)', 'Flood Freq (Floods/yr)', 'Distance_to_Fluvial_m_log',
-#                    'Distance_to_Ocean_m_log']]
-# X_test = X_test[['NDVI', 'Land_Lost_m2', 'Tide_Amp (ft)', 'Flood Freq (Floods/yr)', 'Distance_to_Fluvial_m_log',
-#                  'Distance_to_Ocean_m_log']]
-#
-# def dataPredictMLR(X_train, y_train, X_test, y_test):
-#     model = linear_model.LinearRegression()
-#     model.fit(X_train, y_train)
-#     ypred = model.predict(X_test)
-#     bestMod = model
-#     # bestscore = 1
-#     bestscore = metrics.r2_score(ypred, y_test)
-#     return ypred, bestMod, bestscore  # there is no best score becuase there is no grid search
-#
-# model = linear_model.LinearRegression()
-# model.fit(X_train, y_train)
-# ypred = model.predict(X_test)
-#
-# def regression_results(y_true2, y_pred2):
-#     # Regression metrics
-#     mean_absolute_error = metrics.mean_absolute_error(y_true2, y_pred2)
-#     r2 = metrics.r2_score(y_true2, y_pred2)
-#     mse = metrics.mean_squared_error(y_true2, y_pred2)
-#
-#     print('MAE: ', round(mean_absolute_error, 4))
-#     print('MSE: ', round(mse, 4))
-#     print('RMSE: ', round(np.sqrt(mse), 4))
-#     print('R2: ', round(r2, 4))
-#
-# regression_results(y_test, ypred)
-#
+    # Determine the correlation in order to plot with different colors
+    corr_list = list()
+    for i in feature_list:
+        b = np.corrcoef(shap_v[i], df_v[i])[1][0]
+        corr_list.append(b)
+    corr_df = pd.concat([pd.Series(feature_list), pd.Series(corr_list)], axis=1).fillna(0)
+    # Make a data frame. Column 1 is the feature, and Column 2 is the correlation coefficient
+    corr_df.columns = ['Variable', 'Corr']
+    corr_df['Sign'] = np.where(corr_df['Corr'] > 0, 'red', 'blue')
+
+    # Plot it
+    shap_abs = np.abs(shap_v)
+    k = pd.DataFrame(shap_abs.mean()).reset_index()
+    k.columns = ['Variable', 'SHAP_abs']
+    k2 = k.merge(corr_df, left_on='Variable', right_on='Variable', how='inner')
+    k2 = k2.sort_values(by='SHAP_abs', ascending=True)
+    colorlist = k2['Sign']
+
+    ax = k2.plot.barh(x='Variable', y='SHAP_abs', color=colorlist, figsize=(15, 8), legend=False)
+    ax.set_xlabel("SHAP Value (Red = Positive Impact)")
+    ax.set_title("Feature Importances of Training Dataset used for Best prediction")
+    figure = ax.get_figure()
+
+    return figure
 
 
+figure = ABS_SHAP(shap_values, data)
+figure.show()
+# figure.savefig(featureimpPath + "wholeDataset.png")
 

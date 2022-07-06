@@ -163,8 +163,8 @@ axf.plot(lims, lims, marker="o", alpha=0.5)
 axf.hist2d(holdtrue, predictedcvRepeat, bins=50, cmap='YlGn')
 
 axf.set_aspect('equal')  # can also be equal
-axf.set_xlabel('Predicted Accretion Rate (mm/yr)')
-axf.set_ylabel('Observed Accretion Rate (mm/yr)')
+axf.set_xlabel('Observed Accretion Rate (mm/yr)')
+axf.set_ylabel('Predicted Accretion Rate (mm/yr)')
 axf.set_title('Heatmap 100x Repeated 5-Fold CV for Whole Dataset')
 
 axf.text(0.05, 0.95, str('R2: ' + str(round(r2cv, 4))), transform=axf.transAxes, fontsize=14,

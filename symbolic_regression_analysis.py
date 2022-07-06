@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from gplearn.genetic import SymbolicRegressor
 from mlxtend.feature_selection import ExhaustiveFeatureSelector
 from numpy import mean
 from scipy import stats
@@ -106,7 +107,7 @@ X_train2, X_val, y_train2, y_val = train_test_split(X_train, y_train, test_size=
 lr = linear_model.LinearRegression()
 feature_selector = ExhaustiveFeatureSelector(lr,
                                              min_features=1,
-                                             max_features=len(allfeats)-1,
+                                             max_features=4,
                                              scoring='r2',
                                              # print_progress=True,
                                              cv=5)  # 5 fold cross-validation
@@ -144,12 +145,33 @@ def regression_results(y_true2, y_pred2):
     print('R2: ', round(r2, 4))
 
 
-def dataPredictMLR(X_train, y_train, X_test, y_test):
-    model = linear_model.LinearRegression()
-    model.fit(X_train, y_train)
-    ypred = model.predict(X_test)
-    bestMod = model
-    # bestscore = 1
+def dataPredictSR(X_train, y_train, X_test, y_test):
+    # est = SymbolicRegressor()
+    #     # est.fit(X_train, y_train)
+    #     # ypred = est.predict(X_test)
+    #     # bestMod = est
+    #     # # bestscore = 1
+    #     # bestscore = metrics.r2_score(y_test, ypred)
+    function_set = ['add', 'sub', 'mul', 'div']
+
+    # Create a based model
+    est_gp_grid = SymbolicRegressor(population_size=5000,
+                                    n_jobs=-1,
+                                    p_crossover=0.6250000000000001,
+                                    p_hoist_mutation=0.07499999999999991,
+                                    p_point_mutation=0.10833333333333328,
+                                    p_subtree_mutation=0.06666666666666658,
+                                    parsimony_coefficient=0.001,
+                                    const_range=None,
+                                    init_method='half and half',
+                                    function_set=function_set,
+                                    tournament_size=3,  # default value = 20
+                                    generations=20,
+                                    stopping_criteria=0.01)
+
+    bestMod = est_gp_grid
+    bestMod.fit(X_train, y_train)
+    ypred = bestMod.predict(X_test)
     bestscore = metrics.r2_score(y_test, ypred)
     return ypred, bestMod, bestscore  # there is no best score becuase there is no grid search
 
@@ -161,7 +183,7 @@ besttestvalues = []
 bestXvals = []
 for i in range(1, 101):
     X_train, X_test, y_train, y_test = train_test_split(X[bestfeatures], y, test_size=0.2, shuffle=True)
-    ypred, bestmodel, bestscore = dataPredictMLR(X_train, y_train, X_test, y_test)
+    ypred, bestmodel, bestscore = dataPredictSR(X_train, y_train, X_test, y_test)
     bestscoresls.append(bestscore)
     bestmodelsls.append(bestmodel)
     bestpredictedvalues.append(ypred)
@@ -169,17 +191,14 @@ for i in range(1, 101):
     bestXvals.append(X_test)
 
 plt.figure()
-sns.boxplot(x=bestscoresls)
+sns.boxplot(x=bestscoresls, showfliers=False)
 plt.show()
 
-# Plot best model results: Get the getidx before sorting
-getidx = bestscoresls.index(np.max(bestscoresls))  # GIVES THE INDEX OF THE BEST MODEL!!!!
-print(np.max(bestscoresls))  # print the highest score
-print(bestmodelsls[getidx].coef_)  # Print the coeficients of the best model
-
+# Find the median score for checking purposes
 bestscoresls.sort()
 middlelist = round((len(bestscoresls)-1)/2)
 medianScore = bestscoresls[middlelist]
+
 # Print the regression results
 besttestvalues = np.asarray(besttestvalues)
 allpredicted = []
@@ -210,10 +229,15 @@ axf.text(0.05, 0.95, str('R2: ' + str(round(r2allcv, 4))), transform=axf.transAx
          verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 figf.show()
 
+# Plot best model results
+getidx = bestscoresls.index(np.max(bestscoresls))  # GIVES THE INDEX OF THE BEST MODEL!!!!
+print(np.max(bestscoresls))  # print the highest score
+print(bestmodelsls[getidx]._program)  # Print the coeficients of the best model
+
 # pred_acc = bestmodelsls[getidx].predict(bestXvals[getidx])
-r2best = metrics.r2_score(besttestvalues[getidx], bestpredictedvalues[getidx])
+r2best = metrics.r2_score(besttestvalues[getidx], bestscoresls[getidx])
 fig, ax = plt.subplots()
-ax.scatter(besttestvalues[getidx], bestpredictedvalues[getidx])
+ax.scatter(besttestvalues[getidx], bestscoresls[getidx])
 
 lims = [
     np.min([ax.get_xlim(), ax.get_ylim()]),  # min of both axes
@@ -224,53 +248,15 @@ plt.plot(lims, lims, 'k-', alpha=0.75, zorder=0)
 ax.set_aspect('equal')  # can also be equal
 ax.set_xlim(lims)
 ax.set_ylim(lims)
-ax.set_title('Best Train-Test Prediction for Accretion for all sites')
+ax.set_title('Best Train-Test SR Prediction for Accretion for all sites')
 ax.set_xlabel('Observed Accretion Rate (mm/yr)')
 ax.set_ylabel('Predicted Accretion Rate (mm/yr)')
-textstr = str('R2: ' + str(round(r2best, 4))) + '\n' + str(bestmodelsls[getidx].coef_)
+textstr = str('R2: ' + str(round(r2best, 4))) + '\n' + str(bestmodelsls[getidx]._program)
 ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=8,
         verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 fig.show()
 
 print('################ BEST SPLIT REGRESSION RESULTS###############')
-regression_results(bestpredictedvalues[getidx], besttestvalues[getidx])
+regression_results(besttestvalues[getidx], bestpredictedvalues[getidx])
 print(bestfeatures)
-
-
-
-
-
-# X_train = X_train[['NDVI', 'Land_Lost_m2', 'Tide_Amp (ft)', 'Flood Freq (Floods/yr)', 'Distance_to_Fluvial_m_log',
-#                    'Distance_to_Ocean_m_log']]
-# X_test = X_test[['NDVI', 'Land_Lost_m2', 'Tide_Amp (ft)', 'Flood Freq (Floods/yr)', 'Distance_to_Fluvial_m_log',
-#                  'Distance_to_Ocean_m_log']]
-#
-# def dataPredictMLR(X_train, y_train, X_test, y_test):
-#     model = linear_model.LinearRegression()
-#     model.fit(X_train, y_train)
-#     ypred = model.predict(X_test)
-#     bestMod = model
-#     # bestscore = 1
-#     bestscore = metrics.r2_score(ypred, y_test)
-#     return ypred, bestMod, bestscore  # there is no best score becuase there is no grid search
-#
-# model = linear_model.LinearRegression()
-# model.fit(X_train, y_train)
-# ypred = model.predict(X_test)
-#
-# def regression_results(y_true2, y_pred2):
-#     # Regression metrics
-#     mean_absolute_error = metrics.mean_absolute_error(y_true2, y_pred2)
-#     r2 = metrics.r2_score(y_true2, y_pred2)
-#     mse = metrics.mean_squared_error(y_true2, y_pred2)
-#
-#     print('MAE: ', round(mean_absolute_error, 4))
-#     print('MSE: ', round(mse, 4))
-#     print('RMSE: ', round(np.sqrt(mse), 4))
-#     print('R2: ', round(r2, 4))
-#
-# regression_results(y_test, ypred)
-#
-
-
 
