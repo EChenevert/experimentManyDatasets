@@ -100,7 +100,7 @@ X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns.values)
 
 # split data into test train and validation sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
-X_train2, X_val, y_train2, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=1)
+X_train2, X_val, y_train2, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=1)
 # using flow from: https://scikit-learn.org/stable/modules/cross_validation.html
 # Exhaustive Feature Selection for MLR
 lr = linear_model.LinearRegression()
@@ -209,10 +209,11 @@ axf.set_title('Heatmap 100x Repeated 5-Fold CV for all sites')
 axf.text(0.05, 0.95, str('R2: ' + str(round(r2allcv, 4))), transform=axf.transAxes, fontsize=14,
          verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 figf.show()
+figf.savefig("D:\\Etienne\\summer2022_CRMS\\everythingCRMS2\\experimentManyDatasets\\mlrWholeDatasetAnalysis\\mlr2Dhist.png")
 
 # pred_acc = bestmodelsls[getidx].predict(bestXvals[getidx])
 r2best = metrics.r2_score(besttestvalues[getidx], bestpredictedvalues[getidx])
-fig, ax = plt.subplots()
+fig, ax = plt.subplots(figsize=(11, 8))
 ax.scatter(besttestvalues[getidx], bestpredictedvalues[getidx])
 
 lims = [
@@ -227,11 +228,11 @@ ax.set_ylim(lims)
 ax.set_title('Best Train-Test Prediction for Accretion for all sites')
 ax.set_xlabel('Observed Accretion Rate (mm/yr)')
 ax.set_ylabel('Predicted Accretion Rate (mm/yr)')
-textstr = str('R2: ' + str(round(r2best, 4))) + '\n' + str(bestmodelsls[getidx].coef_)
+textstr = str('R2: ' + str(round(r2best, 4))) + '\n' + str(bestmodelsls[getidx].coef_) + '\n' + str(bestfeatures)
 ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=8,
         verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 fig.show()
-
+fig.savefig("D:\\Etienne\\summer2022_CRMS\\everythingCRMS2\\experimentManyDatasets\\mlrWholeDatasetAnalysis\\mlrBestTrainTest.png")
 print('################ BEST SPLIT REGRESSION RESULTS###############')
 regression_results(bestpredictedvalues[getidx], besttestvalues[getidx])
 print(bestfeatures)

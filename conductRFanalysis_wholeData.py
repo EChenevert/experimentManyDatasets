@@ -101,7 +101,7 @@ X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns.values)
 
 # split data into test train and validation sets
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
-X_train2, X_val, y_train2, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=1)
+X_train2, X_val, y_train2, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=1)
 # using flow from: https://scikit-learn.org/stable/modules/cross_validation.html
 # Exhaustive Feature Selection for MLR
 lr = linear_model.LinearRegression()
@@ -212,6 +212,7 @@ axf.set_title('RF Heatmap 100x Repeated 5-Fold CV for all sites')
 axf.text(0.05, 0.95, str('R2: ' + str(round(r2allcv, 4))), transform=axf.transAxes, fontsize=14,
          verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 figf.show()
+figf.savefig("D:\\Etienne\\summer2022_CRMS\\everythingCRMS2\\experimentManyDatasets\\rfWholeDatasetAnalysis\\rf2Dhist.png")
 
 # Plot best model results
 
@@ -238,6 +239,7 @@ textstr = str('R2: ' + str(round(r2best, 4)))
 ax.text(0.05, 0.95, textstr, transform=ax.transAxes, fontsize=12,
         verticalalignment='top', bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.5))
 fig.show()
+fig.savefig("D:\\Etienne\\summer2022_CRMS\\everythingCRMS2\\experimentManyDatasets\\rfWholeDatasetAnalysis\\rfBestTrainTest.png")
 
 print('################ BEST SPLIT REGRESSION RESULTS###############')
 regression_results(besttestvalues[getidx], bestpredictedvalues[getidx])
@@ -293,5 +295,5 @@ def ABS_SHAP(df_shap, df):
 
 figure = ABS_SHAP(shap_values, data)
 figure.show()
-# figure.savefig(featureimpPath + "wholeDataset.png")
+figure.savefig("D:\\Etienne\\summer2022_CRMS\\everythingCRMS2\\experimentManyDatasets\\rfWholeDatasetAnalysis\\featImps.png")
 
