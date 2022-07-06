@@ -22,7 +22,7 @@ d = pd.read_csv(r"D:\Etienne\summer2022_CRMS\everythingCRMS2\experimentManyDatas
 outcome = 'Accretion Rate (mm/yr)'  # Define the target variable
 
 allfeats = [
-    'Distance_to_Bays_m', 'Distance_to_Ocean_m', 'Distance_to_Fluvial_m',
+    'Distance_to_Bays_m', 'Distance_to_Ocean_m', 'Distance_to_Fluvial_m', 'Distance_to_Water_m',
     'NDVI', 'tss_med', 'windspeed', 'Land_Lost_m2',
     'Soil Salinity (ppt)', 'Average Height Herb (cm)',
     'avg_percentflooded (%)', 'Tide_Amp (ft)', 'avg_flooding (ft)', 'Flood Freq (Floods/yr)',
@@ -99,14 +99,14 @@ X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns.values)
 
 
 # split data into test train and validation sets
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=1)
-X_train2, X_val, y_train2, y_val = train_test_split(X_train, y_train, test_size=0.2, random_state=1)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25, random_state=1)
+X_train2, X_val, y_train2, y_val = train_test_split(X_train, y_train, test_size=0.25, random_state=1)
 # using flow from: https://scikit-learn.org/stable/modules/cross_validation.html
 # Exhaustive Feature Selection for MLR
 lr = linear_model.LinearRegression()
 feature_selector = ExhaustiveFeatureSelector(lr,
                                              min_features=1,
-                                             max_features=len(allfeats)-1,
+                                             max_features=6,
                                              scoring='r2',
                                              # print_progress=True,
                                              cv=5)  # 5 fold cross-validation
@@ -160,7 +160,7 @@ bestpredictedvalues = []
 besttestvalues = []
 bestXvals = []
 for i in range(1, 101):
-    X_train, X_test, y_train, y_test = train_test_split(X[bestfeatures], y, test_size=0.2, shuffle=True)
+    X_train, X_test, y_train, y_test = train_test_split(X[bestfeatures], y, test_size=0.25, shuffle=True)
     ypred, bestmodel, bestscore = dataPredictMLR(X_train, y_train, X_test, y_test)
     bestscoresls.append(bestscore)
     bestmodelsls.append(bestmodel)
